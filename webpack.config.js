@@ -4,12 +4,13 @@
 //引入工具模块
 const path = require('path');
 const glob = require('glob');
+let fs = require('fs')
 const webpack = require('webpack');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const uglifyJsPlugin = webpack.optimize.UglifyJsPlugin;
 const optimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
-
+let CopyWebpackPlugin = require('copy-webpack-plugin');
 
 //判断当前运行环境是开发模式还是生产模式
 const nodeEnv = process.env.NODE_ENV || 'development';
@@ -56,7 +57,7 @@ let pluginsFn = ()=>{
         let html = new HtmlWebpackPlugin({
             filename: `${pageName}.html`,
             template: path.join(path.resolve(),`/src/${pageName}/index.html`),
-            chunks: [pageName], //需要引入的chunk，不配置就会引入所有页面的资源
+            chunks: ['vendor',pageName], //需要引入的chunk，不配置就会引入所有页面的资源
             inject: 'body', //js插入的位置，true/'head'/'body'/false
             //hash: true, // 为静态资源生成hash值
             showErrors: false,  //错误信息不写入
@@ -79,9 +80,23 @@ let pluginsFn = ()=>{
         new ExtractTextPlugin({
         filename: './css/[name]/index.[contenthash].css',
         // allChunks: true
+        }),
+        new webpack.optimize.CommonsChunkPlugin({
+            name: 'vendor',
+            minChunks: function (module) {
+                // 该配置假定你引入的 vendor 存在于 node_modules 目录中
+                return module.context && module.context.indexOf('node_modules') !== -1;
+            }
+        }),
+        new webpack.optimize.UglifyJsPlugin({
+            compress: {
+                warnings: false
+            }
         })
     )
-
+    if(fs.existsSync('MP_verify_FctEvRoUak8HPaVF.txt')){
+        plugins.push(new CopyWebpackPlugin([{from:  __dirname + '/MP_verify_FctEvRoUak8HPaVF.txt', to:  __dirname + '/dist/MP_verify_FctEvRoUak8HPaVF.txt'}]))
+    }
     return plugins
 }
 
@@ -100,7 +115,7 @@ module.exports = {
     entry:entryFn(),
     output: {
         path:path.resolve(__dirname, "dist"), // string
-        filename: "./js/[name]/index.[chunkhash].js", // 用于多个入口点(entry point)（出口点？）
+        filename: isPro?"./js/[name]/index.[chunkhash].js":"./js/[name]/index.js", // 用于多个入口点(entry point)（出口点？）
         //filename: "[chunkhash].js", // 用于长效缓存
     },
     //publicPath: "/assets/", // string
